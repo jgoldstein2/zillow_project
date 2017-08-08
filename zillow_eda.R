@@ -11,6 +11,8 @@ rapply(training_df, function(x)length(unique(x)))
 unique(training_df$assessmentyear) 
 # assessmentyear only has one value (2015), it can probably be dropped
 
+####Variables With Missing Values####
+
 unique(training_df$airconditioningtypeid)
 table(training_df$airconditioningtypeid)
 # Represents type of cooling system in home
@@ -211,3 +213,68 @@ unique(training_df$taxdelinquencyyear)
 # Represents year of unpaid property taxes
 # 98% of values are missing, missing values probably represent homes without delinquencies
 # If we use this variable, we may want to create a variable with two values (delinquent and not delinquent)
+
+####Variables Without Missing Values####
+unique(training_df$bathroomcnt)
+# Represents total number of bathrooms, values are numeric (0.0 - 20.0)
+# This is probably the most helpful bathroom-related variable since no values are missing
+
+unique(training_df$bedroomcnt)
+# Represents number of bedrooms in the home, values are numeric (0-15)
+
+unique(training_df$fips)
+# Federal Information Processing Standards (FIPS) code identifies counties and county equivalents
+# There are three unique values (should be factors)
+
+unique(training_df$hashottuborspa)
+# Represents whether home has hot tub or spa 
+# Values are either "" or "true" - should probably be converted to 0 and 1 if we use
+
+unique(training_df$latitude)
+unique(training_df$longitude)
+# Latitude and longitude of home
+
+unique(training_df$propertycountylandusecode)
+# Represents zoning by county level - there are about 80 different codes
+# No missing values but there are "" values
+
+unique(training_df$propertylandusetypeid)
+# Represents type of land use the property is zoned for (eg, Mobile Homes)
+# There are about 10 different numerical values (should be factors)
+
+unique(training_df$propertyzoningdesc)
+# Represents description of allowed land uses
+# No missing values but over a thousand different codes - probably not useful to us
+
+unique(training_df$rawcensustractandblock)
+# Represents Census tract and block ID number
+# There are thousands of different numbers - probably not useful except for mapping
+
+unique(training_df$regionidcounty)
+# Represents county where the property is located
+# There are three unique values (should be factors)
+
+unique(training_df$roomcnt)
+# Represents total number of rooms in home, values are numeric (0-18)
+# We probably don't want to use multiple room count variables because of multicollinearity
+
+unique(training_df$fireplaceflag)
+# Represents whether fireplace is present in the home
+# Values are either "" or "true" - should be replaced with 0 and 1 if we use
+# We probably should use this over "fireplacecnt" variable since there are no missing values here
+
+unique(training_df$taxdelinquencyflag)
+# Represents whether property taxes are past due in 2005
+# Values are either "" or "Y" - should be replaced with 0 or 1 if we use
+# This is probably a more useful variable than "taxdeliquency
+
+unique(training_df$censustractandblock)
+# Represents Census tract and block ID number
+# There are thousands of different numbers - probably not useful except for mapping
+
+#####Variables From Train Group#####
+length(unique(training_df$parcelid))
+# 90275 observations in the data frame, but only 90150 unique parcels - some must be listed more than once
+
+transaction_dates = training_df %>% group_by(transactiondate) %>% summarise(n())
+# 352 different dates ranging from 1/1/16 to 12/30/16
