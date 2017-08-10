@@ -1,25 +1,31 @@
 ###############################################################
+# Common scripts to check missing data
+###############################################################
+
+sort(sapply(cleanTraining2, function(x) { sum(is.na(x)) }), decreasing=TRUE)
+nrow(cleanTraining)
+nrow(cleanTraining2)
+names(cleanTraining)
+sapply(cleanTraining, class)
+names(cleanTraining)
+dim(cleanTraining2)
+
+save(cleanTraining, file='cleanTraining_master.Rda')
+# 
+# names(cleanTraining)
+###############################################################
 # Reading files 
 ###############################################################
 
 train_df <- fread('train_2016_v2.csv')
-sample_df <- fread('sample_submission.csv')
 properties_df <- fread('properties_2016.csv')
+# sample_df <- fread('sample_submission.csv')
 
 ###############################################################
 # joining tain_df with properties_df
 ###############################################################
 
 training_df <- left_join(train_df, properties_df, by='parcelid')
-
-###############################################################
-# Common scripts to check missing data
-###############################################################
-
-sort(sapply(cleanTraining, function(x) { sum(is.na(x)) }), decreasing=TRUE)
-nrow(cleanTraining)
-nrow(cleanTraining2)
-names(cleanTraining)
 
 ###############################################################
 # Dropping columns
@@ -30,14 +36,25 @@ name_list <- names(training_df)
 cols_drop <- c(name_list[55], name_list[5:6], name_list[9], 
                name_list[11], name_list[45], name_list[13],
                name_list[15:20], name_list[52], name_list[22],
-               name_list[27:28], name_list[51], name_list[31:35],
+               name_list[51], name_list[31:35],
                name_list[37:39], name_list[60], name_list[41],
                name_list[43:44], name_list[46], name_list[48:49],
                name_list[59])
 
 cleanTraining <- training_df[ , !(names(training_df) %in% cols_drop)]
-# save(cleanTraining, file='cleanTraining_AGT.Rda')
 
+# lat_long <- data.frame(c(training_df['parcelid'], training_df['latitude'], training_df['longitude']))
+# names(lat_long)
+# names(cleanTraining2)
+# 
+# library(dplyr)
+# cleanTraining2 <- cleanTraining
+# cleanTraining2 <- left_join(cleanTraining, lat_long, by ='parcelid')
+# x <- unique(cleanTraining2)
+# nrow(cleanTraining2)
+# nrow(cleanTraining)
+# dim(x)
+# sum(is.na(x))
 ###############################################################
 # Imputation of Binary Variables 
 ###############################################################
@@ -49,6 +66,12 @@ cleanTraining$poolcnt[is.na(cleanTraining$poolcnt)] = 0
 cleanTraining$unitcnt[is.na(cleanTraining$unitcnt)] = 1
 cleanTraining$taxdelinquencyflag[is.na(cleanTraining$taxdelinquencyflag)] = 0
 
+cleanTraining$airconditioningtypeid = ifelse(is.na(cleanTraining$airconditioningtypeid),
+                                      ifelse(cleanTraining$heatingorsystemtypeid == 2, 1, cleanTraining$airconditioningtypeid),
+                                      ifelse(cleanTraining$airconditioningtypeid == 5, 0, 1))
+
+cleanTraining$heatingorsystemtypeid = ifelse(is.na(cleanTraining$heatingorsystemtypeid), 0, 
+                                      ifelse(cleanTraining$heatingorsystemtypeid == 13, 0, 1))
 ###############################################################
 # Imputation by Mean
 ###############################################################
@@ -65,6 +88,8 @@ cleanTraining$landtaxvaluedollarcnt = imputed.landtaxvaluedollarcnt
 
 imputed.taxamount = impute(cleanTraining$taxamount, mean)
 cleanTraining$taxamount = imputed.taxamount
+
+cleanTraining$bathroomcnt <- ifelse(cleanTraining$bathroomcnt == 0, sample(c(2,2.5)), cleanTraining$bathroomcnt)
 
 ###############################################################
 # Mutating Age of Home Variable and Imputing
@@ -87,45 +112,103 @@ cleanTraining <- cleanTraining %>% filter(!(is.na(cleanTraining$regionidzip)))
 # Changing variables to factors 
 ###############################################################
 
-# sapply(cleanTraining, class)
-
 cols_reduced <- names(cleanTraining)
-cols_factors <- c(cols_reduced[6:7], cols_reduced[9], cols_reduced[10],
-                  cols_reduced[12], cols_reduced[14:18], cols_reduced[23],
-                  cols_reduced[25:26])
+cols_factors <- c('airconditioningtypeid', 'buildingqualitytypeid', 'decktypeid',
+                  'fireplacecnt', 'hashottuborspa', 'heatingorsystemtypeid', 
+                  'poolcnt', 'propertylandusetypeid', 'regionidcounty', 
+                  'regionidzip', 'taxdelinquencyflag')
 cleanTraining[cols_factors] <- lapply(cleanTraining[cols_factors], factor)
 
 ###############################################################
-# Imputation by MICE package, visit web address below for explanation
-# https://www.kaggle.com/captcalculator/imputing-missing-data-with-the-mice-package-in-r
+# Imputation by MICE package
 ###############################################################
 
-install.packages("Amelia")
-library(Amelia)
+### Maybe we should impute with other packages to see differences?
+# install.packages("Amelia")
+# library(Amelia)
+# ?amelia
 library(mice)
-?amelia
 
-exclude <- c('airconditioningtypeid', 'heatingorsystemtypeid')
-include <- setdiff(names(cleanTraining), exclude)
+### Code if you need to exclude rows from imputation, run 
+### before the imputation:
+# exclude <- c("latitude", "longitude")
+# include <- setdiff(names(cleanTraining), exclude)
+# train_raw <- cleanTraining
 
-train_raw <- cleanTraining[include]
-imp.train_raw <- mice(train_raw, m=1, method='cart', printFlag=FALSE)
+# Imputation code, running m=5 did not work, maybe will try again later
+imp.train_raw <- mice(cleanTraining, m=1, method='cart', printFlag=FALSE)
+
+# Merging imputed values into data set
+impute_complete <- complete(imp.train_raw)
+cleanTraining <- impute_complete
+
+### Code if you need to add columns back in that you excluded
+# cleanTraining <- cbind(impute_complete, cleanTraining[exclude])
+
+###############################################################
+# Exploring the Imputations
+###############################################################
 
 # Shows distribution of imputed values within the existing data set
 library(lattice)
 xyplot(imp.train_raw, calculatedfinishedsquarefeet ~ logerror)
+xyplot(imp.train_raw, buildingqualitytypeid ~ logerror)
 
 # Checking the values it assigned to missing variables
 # Some viz would be good to explore the imputed values/data
 table(imp.train_raw$imp$calculatedfinishedsquarefeet)
 table(imp.train_raw$imp$buildingqualitytypeid)
-table(imp.train_raw$imp$buildingqualitytypeid)
 table(imp.train_raw$imp$garagecarcnt)
-table(imp.train_raw$imp$garagecarcnt)
+table(imp.train_raw$imp$garagetotalsqft)
+table(imp.train_raw$imp$lotsizesquarefeet)
 
-# Merging imputed values into data set
-impute_complete <- complete(imp.train_raw)
-cleanTraining <- cbind(impute_complete, cleanTraining[exclude])
+names(imp.train_raw$imp)
+
+###############################################################
+# Types of Imputations Performed
+###############################################################
+### No missing values
+# parcelid, logerror, transactiondate, bedroomcnt, regionidcounty, propertylandusetypeid
+
+### Assigned missing values as 0s
+# decktypeid, fireplacecnt, hashottuborspa, poolcnt,
+# taxdelinquencyflag, taxvaluedollarcnt, 
+
+### Assigned missing values as 1
+# unitcnt: assumed all missing values were 1
+
+### Imputed by mean, not very many missing values relative to the data set
+# taxvaluedollarcnt, structuretaxvaluedollarcnt, landtaxvaluedollarcnt, taxamount
+
+### Created new varibale subtracting year built from present year, imputed by mean
+# age_of_home
+
+### Removed observations without a zip code, only 35 observations
+# regionidzip
+
+### Performed ANOVA to test for significance, 
+# airconditioningtypeid: siginificant, converted to binary
+# heatingorsystemtypeid: 
+
+### Performed "cart" method impuatation from MICE pacakge, 
+### "cart" method stands for classification and regression trees
+### performs a regression tree analysis for the imputed values. 
+### Imputed values inferred from other variables.
+# garagecarcnt, garagetotalsqft, lotsizesquarefeet, calculatedfinishedsquarefeet, 
+# buildingqualitytypeid, airconditioningtypeid
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
