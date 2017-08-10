@@ -2,7 +2,7 @@
 # Common scripts to check missing data
 ###############################################################
 
-sort(sapply(cleanTraining2, function(x) { sum(is.na(x)) }), decreasing=TRUE)
+sort(sapply(cleanTraining, function(x) { sum(is.na(x)) }), decreasing=TRUE)
 sapply(cleanTraining, typeof)
 sapply(cleanTraining, class)
 nrow(cleanTraining)
@@ -10,8 +10,8 @@ nrow(cleanTraining2)
 names(cleanTraining)
 names(cleanTraining)
 dim(cleanTraining2)
-View(cleanTraining2)
-table(cleanTraining2$hashottuborspa)
+View(cleanTraining)
+table(cleanTraining$hashottuborspa)
 
 # save(cleanTraining, file='cleanTraining_master.Rda')
 # 
@@ -67,7 +67,7 @@ cleanTraining$fireplacecnt[is.na(cleanTraining$fireplacecnt)] = 0
 cleanTraining$poolcnt[is.na(cleanTraining$poolcnt)] = 0
 cleanTraining$unitcnt[is.na(cleanTraining$unitcnt)] = 1
 
-cleanTraining2$taxdelinquencyflag = ifelse(cleanTraining$taxdelinquencyflag == '', 0, 1)
+cleanTraining$taxdelinquencyflag = ifelse(cleanTraining$taxdelinquencyflag == '', 0, 1)
 
 cleanTraining$hashottuborspa = ifelse(cleanTraining$hashottuborspa == '', 0, 1)
 
@@ -123,6 +123,8 @@ cols_factors <- c('airconditioningtypeid', 'buildingqualitytypeid', 'decktypeid'
                   'poolcnt', 'propertylandusetypeid', 'regionidcounty', 
                   'regionidzip', 'taxdelinquencyflag')
 cleanTraining[cols_factors] <- lapply(cleanTraining[cols_factors], factor)
+cleanTraining$garagecarcnt = as.numeric(cleanTraining$garagecarcnt)
+cleanTraining$unitcnt = as.numeric(cleanTraining$unitcnt)
 
 ###############################################################
 # Imputation by MICE package
@@ -166,6 +168,7 @@ table(imp.train_raw$imp$buildingqualitytypeid)
 table(imp.train_raw$imp$garagecarcnt)
 table(imp.train_raw$imp$garagetotalsqft)
 table(imp.train_raw$imp$lotsizesquarefeet)
+table(imp.train_raw$imp$airconditioningtypeid)
 
 names(imp.train_raw$imp)
 
