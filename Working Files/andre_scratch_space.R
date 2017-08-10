@@ -3,14 +3,17 @@
 ###############################################################
 
 sort(sapply(cleanTraining2, function(x) { sum(is.na(x)) }), decreasing=TRUE)
+sapply(cleanTraining, typeof)
+sapply(cleanTraining, class)
 nrow(cleanTraining)
 nrow(cleanTraining2)
 names(cleanTraining)
-sapply(cleanTraining, class)
 names(cleanTraining)
 dim(cleanTraining2)
+View(cleanTraining2)
+table(cleanTraining2$hashottuborspa)
 
-save(cleanTraining, file='cleanTraining_master.Rda')
+# save(cleanTraining, file='cleanTraining_master.Rda')
 # 
 # names(cleanTraining)
 ###############################################################
@@ -61,10 +64,12 @@ cleanTraining <- training_df[ , !(names(training_df) %in% cols_drop)]
 
 cleanTraining$decktypeid[is.na(cleanTraining$decktypeid)] = 0
 cleanTraining$fireplacecnt[is.na(cleanTraining$fireplacecnt)] = 0
-cleanTraining$hashottuborspa[is.na(cleanTraining$hashottuborspa)] = 0
 cleanTraining$poolcnt[is.na(cleanTraining$poolcnt)] = 0
 cleanTraining$unitcnt[is.na(cleanTraining$unitcnt)] = 1
-cleanTraining$taxdelinquencyflag[is.na(cleanTraining$taxdelinquencyflag)] = 0
+
+cleanTraining2$taxdelinquencyflag = ifelse(cleanTraining$taxdelinquencyflag == '', 0, 1)
+
+cleanTraining$hashottuborspa = ifelse(cleanTraining$hashottuborspa == '', 0, 1)
 
 cleanTraining$airconditioningtypeid = ifelse(is.na(cleanTraining$airconditioningtypeid),
                                       ifelse(cleanTraining$heatingorsystemtypeid == 2, 1, cleanTraining$airconditioningtypeid),
