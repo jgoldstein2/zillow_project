@@ -8,8 +8,8 @@ library(mice)
 ###############################################################
 # Reading files 
 ###############################################################
-properties_df = read.csv("./properties_2016.csv")
-train_df = read.csv("./train_2016_v2.csv")
+properties_df = fread("./properties_2016.csv")
+train_df = fread("./train_2016_v2.csv")
 
 ###############################################################
 # joining train_df with properties_df

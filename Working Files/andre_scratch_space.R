@@ -102,7 +102,7 @@ mode_ <- function(x) {
   names(which.max(table(cleanTraining$bathroomcnt)))
 }
 
-cleanTraining$bathroomcnt <- as.numeric(ifelse(cleanTrainingt$bathroomcnt == 0, 
+cleanTraining$bathroomcnt <- as.numeric(ifelse(cleanTraining$bathroomcnt == 0, 
                                                   mode_(cleanTraining$bathroomcnt), 
                                                             cleanTraining$bathroomcnt))
 
@@ -111,7 +111,7 @@ cleanTraining$bathroomcnt <- as.numeric(ifelse(cleanTrainingt$bathroomcnt == 0,
 ###############################################################
 cleanTraining <- cleanTraining %>% mutate(age_of_home = 2017 - cleanTraining$yearbuilt)
 
-imputed.age_of_home = round(as.numeric(impute(cleanTraining$age_of_home, mean)), 0)
+imputed.age_of_home = as.numeric(round(impute(cleanTraining$age_of_home, mean), 0))
 cleanTraining$age_of_home = imputed.age_of_home
 cleanTraining$yearbuilt <- NULL
 
@@ -161,6 +161,14 @@ cleanTraining <- impute_complete
 
 ### Code if you need to add columns back in that you excluded
 # cleanTraining <- cbind(impute_complete, cleanTraining[exclude])
+
+###############################################################
+# Mutating building type id to groups
+###############################################################
+
+bldg_vec <- unique(cleanTraining$buildingqualitytypeid)
+
+
 
 ###############################################################
 # Rename flag variables so they make more sense
