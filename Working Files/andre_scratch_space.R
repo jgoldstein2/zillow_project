@@ -9,9 +9,10 @@ nrow(cleanTraining)
 nrow(cleanTraining2)
 names(cleanTraining)
 names(cleanTraining)
-dim(cleanTraining2)
+dim(cleanTraining)
 View(cleanTraining)
 table(cleanTraining$hashottuborspa)
+blank_count = as.data.frame(sapply(cleanTraining, function(x) (sum(x == "")/length(x)) * 100))
 
 # save(cleanTraining, file='cleanTraining_master.Rda')
 # 
@@ -19,7 +20,8 @@ table(cleanTraining$hashottuborspa)
 ###############################################################
 # Reading files 
 ###############################################################
-
+library(DT)
+library(data.table)
 train_df <- fread('train_2016_v2.csv')
 properties_df <- fread('properties_2016.csv')
 # sample_df <- fread('sample_submission.csv')
@@ -27,45 +29,47 @@ properties_df <- fread('properties_2016.csv')
 ###############################################################
 # joining tain_df with properties_df
 ###############################################################
-
+library(dplyr)
 training_df <- left_join(train_df, properties_df, by='parcelid')
 
 ###############################################################
 # Dropping columns
 ###############################################################
-
 name_list <- names(training_df)
 
-cols_drop <- c(name_list[55], name_list[5:6], name_list[9], 
-               name_list[11], name_list[45], name_list[13],
-               name_list[15:20], name_list[52], name_list[22],
-               name_list[51], name_list[31:35],
-               name_list[37:39], name_list[60], name_list[41],
-               name_list[43:44], name_list[46], name_list[48:49],
-               name_list[59])
+cols_drop <- c("assessmentyear", "architecturalstyletypeid", "basementsqft", 
+               "buildingclasstypeid", "calculatedbathnbr", "threequarterbathnbr", 
+               "finishedfloor1squarefeet", "finishedsquarefeet12", "finishedsquarefeet13",        
+               "finishedsquarefeet15", "finishedsquarefeet50", "finishedsquarefeet6", 
+               "fips", "fireplaceflag", "fullbathcnt", "numberofstories", "poolsizesum",
+               "pooltypeid10", "pooltypeid2", "pooltypeid7", "propertycountylandusecode", 
+               "propertyzoningdesc", "rawcensustractandblock", "regionidcity", "censustractandblock",
+               "regionidneighborhood", "roomcnt", "storytypeid", "typeconstructiontypeid", 
+               "yardbuildingsqft17", "yardbuildingsqft26", "taxdelinquencyyear")
 
 cleanTraining <- training_df[ , !(names(training_df) %in% cols_drop)]
 
-# lat_long <- data.frame(c(training_df['parcelid'], training_df['latitude'], training_df['longitude']))
-# names(lat_long)
-# names(cleanTraining2)
-# 
-# library(dplyr)
-# cleanTraining2 <- cleanTraining
-# cleanTraining2 <- left_join(cleanTraining, lat_long, by ='parcelid')
-# x <- unique(cleanTraining2)
-# nrow(cleanTraining2)
-# nrow(cleanTraining)
-# dim(x)
-# sum(is.na(x))
 ###############################################################
-# Imputation of Binary Variables 
+# Mutating/adding Features
 ###############################################################
 
-cleanTraining$decktypeid[is.na(cleanTraining$decktypeid)] = 0
-cleanTraining$fireplacecnt[is.na(cleanTraining$fireplacecnt)] = 0
+library(lubridate)
+cleanTraining = cleanTraining %>% mutate(latitude = latitude/1e6, longitude = longitude/1e6)
+cleanTraining = cleanTraining %>% mutate(month = month(transactiondate))
+cleanTraining = cleanTraining %>% mutate(totalroom = bathroomcnt + bedroomcnt)
+
+###############################################################
+# Imputation of Binary Variables
+###############################################################
+
 cleanTraining$poolcnt[is.na(cleanTraining$poolcnt)] = 0
 cleanTraining$unitcnt[is.na(cleanTraining$unitcnt)] = 1
+
+cleanTraining$decktypeid[is.na(cleanTraining$decktypeid)] = 0
+cleanTraining$decktypeid = ifelse(cleanTraining$decktypeid == 66, 1, 0)
+
+cleanTraining$fireplacecnt[is.na(cleanTraining$fireplacecnt)] = 0
+cleanTraining$fireplacecnt = ifelse(cleanTraining$fireplacecnt == 0, 0, 1)
 
 cleanTraining$taxdelinquencyflag = ifelse(cleanTraining$taxdelinquencyflag == '', 0, 1)
 
@@ -82,28 +86,32 @@ cleanTraining$heatingorsystemtypeid = ifelse(is.na(cleanTraining$heatingorsystem
 ###############################################################
 
 library(Hmisc)
-imputed.taxvaluedollarcnt = impute(cleanTraining$taxvaluedollarcnt, mean)
+imputed.taxvaluedollarcnt = as.numeric(impute(cleanTraining$taxvaluedollarcnt, mean))
 cleanTraining$taxvaluedollarcnt = imputed.taxvaluedollarcnt
 
-imputed.structuretaxvaluedollarcnt = impute(cleanTraining$structuretaxvaluedollarcnt, mean)
+imputed.structuretaxvaluedollarcnt = as.numeric(impute(cleanTraining$structuretaxvaluedollarcnt, mean))
 cleanTraining$structuretaxvaluedollarcnt = imputed.structuretaxvaluedollarcnt
 
-imputed.landtaxvaluedollarcnt = impute(cleanTraining$landtaxvaluedollarcnt, mean)
+imputed.landtaxvaluedollarcnt = as.numeric(impute(cleanTraining$landtaxvaluedollarcnt, mean))
 cleanTraining$landtaxvaluedollarcnt = imputed.landtaxvaluedollarcnt
 
-imputed.taxamount = impute(cleanTraining$taxamount, mean)
+imputed.taxamount = as.numeric(impute(cleanTraining$taxamount, mean))
 cleanTraining$taxamount = imputed.taxamount
 
-cleanTraining$bathroomcnt <- ifelse(cleanTraining$bathroomcnt == 0, sample(c(2,2.5)), cleanTraining$bathroomcnt)
+mode_ <- function(x) {
+  names(which.max(table(cleanTraining$bathroomcnt)))
+}
+
+cleanTraining$bathroomcnt <- as.numeric(ifelse(cleanTrainingt$bathroomcnt == 0, 
+                                                  mode_(cleanTraining$bathroomcnt), 
+                                                            cleanTraining$bathroomcnt))
 
 ###############################################################
 # Mutating Age of Home Variable and Imputing
 ###############################################################
-
-library(dplyr)
 cleanTraining <- cleanTraining %>% mutate(age_of_home = 2017 - cleanTraining$yearbuilt)
 
-imputed.age_of_home = impute(cleanTraining$age_of_home, mean)
+imputed.age_of_home = round(as.numeric(impute(cleanTraining$age_of_home, mean)), 0)
 cleanTraining$age_of_home = imputed.age_of_home
 cleanTraining$yearbuilt <- NULL
 
@@ -121,11 +129,13 @@ cols_reduced <- names(cleanTraining)
 cols_factors <- c('airconditioningtypeid', 'buildingqualitytypeid', 'decktypeid',
                   'fireplacecnt', 'hashottuborspa', 'heatingorsystemtypeid', 
                   'poolcnt', 'propertylandusetypeid', 'regionidcounty', 
-                  'regionidzip', 'taxdelinquencyflag')
+                  'regionidzip', 'taxdelinquencyflag', 'month')
 cleanTraining[cols_factors] <- lapply(cleanTraining[cols_factors], factor)
+
 cleanTraining$garagecarcnt = as.numeric(cleanTraining$garagecarcnt)
 cleanTraining$unitcnt = as.numeric(cleanTraining$unitcnt)
-
+cleanTraining$garagetotalsqft = as.numeric(cleanTraining$garagetotalsqft)
+cleanTraining$month = as.factor(cleanTraining$month)
 ###############################################################
 # Imputation by MICE package
 ###############################################################
@@ -153,13 +163,28 @@ cleanTraining <- impute_complete
 # cleanTraining <- cbind(impute_complete, cleanTraining[exclude])
 
 ###############################################################
+# Rename flag variables so they make more sense
+###############################################################
+cleanTraining = rename(cleanTraining, acflag = airconditioningtypeid, deckflag = decktypeid, 
+                       fireplaceflag = fireplacecnt, hottubflag = hashottuborspa, heatflag = heatingorsystemtypeid, poolflag = poolcnt)
+
+
+###############################################################
 # Exploring the Imputations
 ###############################################################
 
 # Shows distribution of imputed values within the existing data set
 library(lattice)
+
 xyplot(imp.train_raw, calculatedfinishedsquarefeet ~ logerror)
+xyplot(imp.train_raw, garagetotalsqft ~ logerror)
+xyplot(imp.train_raw, lotsizesquarefeet ~ logerror)
 xyplot(imp.train_raw, buildingqualitytypeid ~ logerror)
+xyplot(imp.train_raw, airconditioningtypeid ~ logerror)
+xyplot(imp.train_raw, garagecarcnt ~ logerror)
+
+densityplot(imp.train_raw, logerror ~ calculatedfinishedsquarefeet + lotsizesquarefeet + garagetotalsqft)
+densityplot(imp.train_raw, logerror ~ buildingqualitytypeid + airconditioningtypeid + garagecarcnt)
 
 # Checking the values it assigned to missing variables
 # Some viz would be good to explore the imputed values/data
@@ -169,6 +194,8 @@ table(imp.train_raw$imp$garagecarcnt)
 table(imp.train_raw$imp$garagetotalsqft)
 table(imp.train_raw$imp$lotsizesquarefeet)
 table(imp.train_raw$imp$airconditioningtypeid)
+
+imp.train_raw
 
 names(imp.train_raw$imp)
 
@@ -200,7 +227,7 @@ names(imp.train_raw$imp)
 
 ### Performed "cart" method impuatation from MICE pacakge, 
 ### "cart" method stands for classification and regression trees
-### performs a regression tree analysis for the imputed values. 
+### performs a calssification and regression tree analysis to impute values. 
 ### Imputed values inferred from other variables.
 # garagecarcnt, garagetotalsqft, lotsizesquarefeet, calculatedfinishedsquarefeet, 
 # buildingqualitytypeid, airconditioningtypeid
