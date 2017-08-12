@@ -158,7 +158,7 @@ cleanTraining$propertylandusetypeid <- NULL
 cleanTraining$buildingqualitytypeid <- NULL
 cleanTraining$transactiondate <- NULL
 
-save(cleanTraining, file='cleanTraining_master.Rda')
+save(cleanTraining, file='cleanTraining_final.Rda')
 
 ###############################################################
 # Types of Imputations Performed
