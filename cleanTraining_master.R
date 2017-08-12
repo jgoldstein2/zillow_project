@@ -79,7 +79,7 @@ cleanTraining$taxamount = as.numeric(impute(cleanTraining$taxamount, mean))
 
 cleanTraining$lotsizesquarefeet <- as.numeric(impute(cleanTraining$lotsizesquarefeet, mean))
 
-cleanTraining$calculatedfinishedsquarefeet <- as.numeric(impute(cleanTraining$lotsizesquarefeet, mean))
+cleanTraining$calculatedfinishedsquarefeet <- as.numeric(impute(cleanTraining$calculatedfinishedsquarefeet, mean))
 
 mode_ <- function(x) {
   names(which.max(table(cleanTraining$bathroomcnt)))

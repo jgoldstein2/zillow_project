@@ -84,7 +84,7 @@ cleanProperties$yearbuilt <- NULL
 
 cleanProperties$lotsizesquarefeet <- as.numeric(impute(cleanProperties$lotsizesquarefeet, mean))
 
-cleanProperties$calculatedfinishedsquarefeet <- as.numeric(impute(cleanProperties$lotsizesquarefeet, mean))
+cleanProperties$calculatedfinishedsquarefeet <- as.numeric(impute(cleanProperties$calculatedfinishedsquarefeet, mean))
 
 ###############################################################
 # Remove blank zip code rows 
