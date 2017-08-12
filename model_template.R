@@ -1,6 +1,7 @@
 library(caret)
 library(data.table)
 library(dplyr)
+library(DT)
 
 load('cleanTraining_final.Rda')
 
@@ -11,7 +12,7 @@ cleanTraining = data.table(cleanTraining)
 
 cleanTraining$valueratioNF = cleanTraining$taxvaluedollarcnt / cleanTraining$taxamount
 cleanTraining$livingareapropNF = cleanTraining$calculatedfinishedsquarefeet / cleanTraining$lotsizesquarefeet 
-cleanTraining$totalroom = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
+cleanTraining$totalroomNF = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
 
 taxgroup = cleanTraining %>% group_by(., regionidzip) %>% summarise(., avgtaxamtNF = mean(taxamount))
 cleanTraining = left_join(cleanTraining, taxgroup, by='regionidzip')
