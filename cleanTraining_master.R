@@ -133,7 +133,6 @@ cleanTraining[cols_factors] <- lapply(cleanTraining[cols_factors], factor)
 
 cleanTraining$garagecarcnt = as.numeric(cleanTraining$garagecarcnt)
 cleanTraining$unitcnt = as.numeric(cleanTraining$unitcnt)
-cleanTraining$garagetotalsqft = as.numeric(cleanTraining$garagetotalsqft)
 
 ###############################################################
 # Rename Binary Variables to Flags

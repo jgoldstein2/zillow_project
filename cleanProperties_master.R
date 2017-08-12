@@ -34,7 +34,6 @@ cleanProperties <- properties_df[ , !(names(properties_df) %in% cols_drop)]
 ###############################################################
 
 cleanProperties = cleanProperties %>% mutate(latitude = latitude/1e6, longitude = longitude/1e6)
-cleanProperties = cleanProperties %>% mutate(totalroom = bathroomcnt + bedroomcnt)
 cleanProperties <- cleanProperties %>% mutate(age_of_home = 2017 - cleanProperties$yearbuilt)
 
 ###############################################################
