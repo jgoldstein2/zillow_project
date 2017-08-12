@@ -263,7 +263,7 @@ names(imp.train_raw$imp)
 ###############################################################
 plot(x = cleanTraining$logerror, y=(cleanTraining$taxvaluedollarcnt/cleanTraining$taxamount), )
 
-
+View(cleanTraining)
 
 
 
