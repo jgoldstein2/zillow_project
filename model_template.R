@@ -1,5 +1,6 @@
 library(caret)
 library(data.table)
+library(dplyr)
 
 load('cleanTraining_final.Rda')
 
@@ -8,8 +9,17 @@ cleanTraining = data.table(cleanTraining)
 # Feature Engineering and Selection 
 ###############################################################
 
+cleanTraining$valueratioNF = cleanTraining$taxvaluedollarcnt / cleanTraining$taxamount
+cleanTraining$livingareapropNF = cleanTraining$calculatedfinishedsquarefeet / cleanTraining$lotsizesquarefeet 
+cleanTraining$totalroom = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
 
+taxgroup = cleanTraining %>% group_by(., regionidzip) %>% summarise(., avgtaxamtNF = mean(taxamount))
+cleanTraining = left_join(cleanTraining, taxgroup, by='regionidzip')
+          
+cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
+               "taxdelinquencyflag", "deckflag", "unitcnt")
 
+cleanTraining <- cleanTraining[ , !(names(cleanTraining) %in% cols_drop)]
 
 ###############################################################
 # Machine Learning Preparation 

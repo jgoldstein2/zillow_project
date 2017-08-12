@@ -40,7 +40,6 @@ cleanTraining <- training_df[ , !(names(training_df) %in% cols_drop)]
 
 cleanTraining = cleanTraining %>% mutate(latitude = latitude/1e6, longitude = longitude/1e6)
 cleanTraining = cleanTraining %>% mutate(month = month(transactiondate))
-cleanTraining = cleanTraining %>% mutate(totalroom = bathroomcnt + bedroomcnt)
 cleanTraining <- cleanTraining %>% mutate(age_of_home = 2017 - cleanTraining$yearbuilt)
 
 ###############################################################
@@ -158,7 +157,7 @@ cleanTraining$propertylandusetypeid <- NULL
 cleanTraining$buildingqualitytypeid <- NULL
 cleanTraining$transactiondate <- NULL
 
-save(cleanTraining, file='cleanTraining_master.Rda')
+save(cleanTraining, file='cleanTraining_final.Rda')
 
 ###############################################################
 # Types of Imputations Performed
