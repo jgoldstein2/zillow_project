@@ -136,27 +136,23 @@ cleanTraining$garagecarcnt = as.numeric(cleanTraining$garagecarcnt)
 cleanTraining$unitcnt = as.numeric(cleanTraining$unitcnt)
 cleanTraining$garagetotalsqft = as.numeric(cleanTraining$garagetotalsqft)
 
+
 ###############################################################
 # Rename Binary Variables to Flags
 ###############################################################
 cleanTraining = rename(cleanTraining, acflag = airconditioningtypeid, deckflag = decktypeid, 
                        fireplaceflag = fireplacecnt, hottubflag = hashottuborspa, heatflag = heatingorsystemtypeid, poolflag = poolcnt)
 
-
 ###############################################################
-# Rename Binary Variables to Flags
+# Create Categories for Variables
 ###############################################################
 
-cleanTraining$property_group = as.factor(ifelse(cleanTraining$propertylandusetypeid %in% c(31,46,47), "Commercial",
-                                                       ifelse(cleanTraining$propertylandusetypeid %in% c(266,267,246,247,248), "Apartment",
-                                                              ifelse(cleanTraining$propertylandusetypeid %in% c(269,290,291,274,270), "Land", "House"))))
-
-cleanTraining$building_quality = as.factor(ifelse(cleanTraining$buildingqualitytypeid %in% c(1,2,3,4), "Good",
-                                                       ifelse(cleanTraining$buildingqualitytypeid %in% c(5,6,7,8), "Average", "Bad")))
-
-cleanTraining$propertylandusetypeid <- NULL
-cleanTraining$buildingqualitytypeid <- NULL
-cleanTraining$transactiondate <- NULL
+cleanTraining$propertylandusetypeid = as.factor(ifelse(cleanTraining$propertylandusetypeid %in% c(31,46,47), "Commercial",
+                                             ifelse(cleanTraining$propertylandusetypeid %in% c(266,267,246,247,248), "Apartment",
+                                                    ifelse(cleanTraining$propertylandusetypeid %in% c(269,290,291,274,270), "Land","House"))))
+                                             
+cleanTraining$buildingqualitytypeid = as.factor(ifelse(cleanTraining$buildingqualitytypeid %in% c(1,2,3,4), "Good", 
+                                                       ifelse(cleanTraining$buildingqualitytypeid %in% c(5,6,7,8), "Average", "Bad")))                                             
 
 save(cleanTraining, file='cleanTraining_master.Rda')
 
