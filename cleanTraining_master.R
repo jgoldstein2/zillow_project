@@ -40,7 +40,6 @@ cleanTraining <- training_df[ , !(names(training_df) %in% cols_drop)]
 
 cleanTraining = cleanTraining %>% mutate(latitude = latitude/1e6, longitude = longitude/1e6)
 cleanTraining = cleanTraining %>% mutate(month = month(transactiondate))
-cleanTraining = cleanTraining %>% mutate(totalroom = bathroomcnt + bedroomcnt)
 cleanTraining <- cleanTraining %>% mutate(age_of_home = 2017 - cleanTraining$yearbuilt)
 
 ###############################################################
@@ -134,7 +133,6 @@ cleanTraining[cols_factors] <- lapply(cleanTraining[cols_factors], factor)
 
 cleanTraining$garagecarcnt = as.numeric(cleanTraining$garagecarcnt)
 cleanTraining$unitcnt = as.numeric(cleanTraining$unitcnt)
-cleanTraining$garagetotalsqft = as.numeric(cleanTraining$garagetotalsqft)
 
 ###############################################################
 # Rename Binary Variables to Flags

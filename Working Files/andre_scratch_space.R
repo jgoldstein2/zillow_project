@@ -256,3 +256,17 @@ names(imp.train_raw$imp)
 
 
 
+
+
+###############################################################
+# Scratch Space
+###############################################################
+plot(x = cleanTraining$logerror, y=(cleanTraining$taxvaluedollarcnt/cleanTraining$taxamount), )
+
+
+
+
+
+
+
+
