@@ -3,7 +3,7 @@ library(data.table)
 library(dplyr)
 library(DT)
 
-load('cleanTraining_final.Rda')
+# load('cleanTraining_final.Rda')
 
 cleanTraining = data.table(cleanTraining)
 ###############################################################
@@ -120,7 +120,7 @@ predict(gbmFit3, newdata = fullTrain)
 # Load Properties File and Add/Drop Features Used in Train Set
 ###############################################################
 
-load('cleanProperties_final.Rda')
+# load('cleanProperties_final.Rda')
 
 ###This must be updated if any new features are added or dropped!
 
@@ -135,7 +135,6 @@ cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvalu
                "taxdelinquencyflag", "deckflag", "unitcnt")
 
 cleanProperties <- cleanProperties[ , !(names(cleanProperties) %in% cols_drop)]
-
 
 ###############################################################
 # Make Prediction for Submission 
@@ -154,6 +153,4 @@ makePrediction <- function(model, newdata, months, labels) {
 
 makePrediction(gbmFit3, newdata = cleanProperties, months = c(10, 11, 12, 22, 23, 24), 
                labels = c("201610", "201611", "201612", "201710", "201711", "201712"))
-
-
 
