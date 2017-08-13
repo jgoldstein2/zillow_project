@@ -2,7 +2,7 @@
 # Common scripts to check missing data
 ###############################################################
 
-sort(sapply(cleanTraining, function(x) { sum(is.na(x)) }), decreasing=TRUE)
+sort(sapply(cleanProperties, function(x) { sum(is.na(x)) }), decreasing=TRUE)
 sapply(cleanTraining, typeof)
 sapply(cleanTraining, class)
 nrow(cleanTraining)
@@ -257,16 +257,38 @@ names(imp.train_raw$imp)
 
 
 
-
 ###############################################################
 # Scratch Space
 ###############################################################
-plot(x = cleanTraining$logerror, y=(cleanTraining$taxvaluedollarcnt/cleanTraining$taxamount), )
+View(cleanProperties)
 
-View(cleanTraining)
+str(properties)
+
+subm <- fread('pipelineGBM_12AugSubmission.csv')
+properties <- fread('properties_2016.csv')
+
+2985217 - 2971238
+
+library(mice)
+md.pattern(cleanProperties)
 
 
+length(cleanProperties$totalroomNF)
 
+mode_ <- function(vec) {
+  names(which.max(table(vec)))
+}
 
+cleanProperties$bathroomcnt <- as.numeric(impute(cleanProperties$bathroomcnt, mode_(cleanProperties$bathroomcnt)))
+
+cleanProperties$bedroomcnt <- as.numeric(impute(cleanProperties$bedroomcnt, mode_(cleanProperties$bedroomcnt)))
+
+cleanProperties$regionidcounty <- as.numeric(impute(cleanProperties$regionidcounty, mode_(cleanProperties$regionidcounty)))
+
+cleanProperties$longitude <- as.numeric(impute(cleanProperties$longitude, mode_(cleanProperties$longitude)))
+
+cleanProperties$latitude <- as.numeric(impute(cleanProperties$latitude, mode_(cleanProperties$latitude)))
+
+cleanProperties$regionidzip <- as.numeric(impute(cleanProperties$regionidzip, mode_(cleanProperties$regionidzip)))
 
 

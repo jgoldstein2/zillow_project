@@ -59,6 +59,7 @@ cleanProperties$airconditioningtypeid = ifelse(is.na(cleanProperties$airconditio
 cleanProperties$heatingorsystemtypeid = ifelse(is.na(cleanProperties$heatingorsystemtypeid), 0, 
                                                ifelse(cleanProperties$heatingorsystemtypeid == 13, 0, 1))
 
+
 ###############################################################
 # Imputation by Mean/Mode
 ###############################################################
@@ -71,13 +72,25 @@ cleanProperties$landtaxvaluedollarcnt = as.numeric(impute(cleanProperties$landta
 
 cleanProperties$taxamount = as.numeric(impute(cleanProperties$taxamount, mean))
 
-mode_ <- function(x) {
-  names(which.max(table(cleanProperties$bathroomcnt)))
+mode_ <- function(vec) {
+  names(which.max(table(vec)))
 }
 
 cleanProperties$bathroomcnt <- as.numeric(ifelse(cleanProperties$bathroomcnt == 0, 
                                                  mode_(cleanProperties$bathroomcnt), 
                                                  cleanProperties$bathroomcnt))
+
+cleanProperties$bathroomcnt <- as.numeric(impute(cleanProperties$bathroomcnt, mode_(cleanProperties$bathroomcnt)))
+
+cleanProperties$bedroomcnt <- as.numeric(impute(cleanProperties$bedroomcnt, mode_(cleanProperties$bedroomcnt)))
+
+cleanProperties$regionidcounty <- as.numeric(impute(cleanProperties$regionidcounty, mode_(cleanProperties$regionidcounty)))
+
+cleanProperties$longitude <- as.numeric(impute(cleanProperties$longitude, mode_(cleanProperties$longitude)))
+
+cleanProperties$latitude <- as.numeric(impute(cleanProperties$latitude, mode_(cleanProperties$latitude)))
+
+cleanProperties$regionidzip <- as.numeric(impute(cleanProperties$regionidzip, mode_(cleanProperties$regionidzip)))
 
 cleanProperties$age_of_home = round(as.numeric(impute(cleanProperties$age_of_home, mean)), 0)
 cleanProperties$yearbuilt <- NULL
@@ -90,7 +103,7 @@ cleanProperties$calculatedfinishedsquarefeet <- as.numeric(impute(cleanPropertie
 # Remove blank zip code rows 
 ###############################################################
 
-cleanProperties <- cleanProperties %>% filter(!(is.na(cleanProperties$regionidzip)))
+# cleanProperties <- cleanProperties %>% filter(!(is.na(cleanProperties$regionidzip)))
 
 ###############################################################
 # Changing variables types
@@ -134,7 +147,7 @@ cleanProperties$buildingqualitytypeid[is.na(cleanProperties$buildingqualitytypei
 # Rename Binary Variables to Flags
 ###############################################################
 
-cleanProperties = rename(cleanProperties, acflag = airconditioningtypeid, deckflag = decktypeid, 
+cleanProperties = dplyr::rename(cleanProperties, acflag = airconditioningtypeid, deckflag = decktypeid, 
                          fireplaceflag = fireplacecnt, hottubflag = hashottuborspa, heatflag = heatingorsystemtypeid, poolflag = poolcnt)
 
 

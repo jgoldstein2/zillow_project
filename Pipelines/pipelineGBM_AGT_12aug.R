@@ -14,7 +14,7 @@ cleanTraining$valueratioNF = cleanTraining$taxvaluedollarcnt / cleanTraining$tax
 cleanTraining$livingareapropNF = cleanTraining$calculatedfinishedsquarefeet / cleanTraining$lotsizesquarefeet 
 cleanTraining$totalroomNF = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
 
-taxgroup = cleanTraining %>% dpylr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+taxgroup = cleanTraining %>% dplyr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
 cleanTraining = dplyr::left_join(cleanTraining, taxgroup, by='regionidzip')
           
 cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
@@ -53,12 +53,12 @@ maeSummary <- function(data, lev = NULL, model = NULL) {
 # Cross Validation 
 ###############################################################
 gridSearch <- trainControl(method = "cv",
-                           number = 5,
+                           number = 10,
                            summaryFunction = maeSummary,
                            verboseIter = TRUE)
 
-gbmGrid <-  expand.grid(interaction.depth = c(7,9,11), 
-                        n.trees = c(500,700), 
+gbmGrid <-  expand.grid(interaction.depth = c(3,5), 
+                        n.trees = c(100, 300, 500), 
                         shrinkage = c(.01, .001),
                         n.minobsinnode = 10)
 
@@ -136,6 +136,7 @@ cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvalu
 
 cleanProperties <- cleanProperties[ , !(names(cleanProperties) %in% cols_drop)]
 
+
 ###############################################################
 # Make Prediction for Submission 
 ###############################################################
@@ -153,3 +154,6 @@ makePrediction <- function(model, newdata, months, labels) {
 
 makePrediction(gbmFit3, newdata = cleanProperties, months = c(10, 11, 12, 22, 23, 24), 
                labels = c("201610", "201611", "201612", "201710", "201711", "201712"))
+
+
+
