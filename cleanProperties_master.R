@@ -10,7 +10,7 @@ library(lattice)
 # Reading files 
 ###############################################################
 
-properties_df = as.data.frame(fread("properties_2016.csv"))
+properties_df = as.data.frame(fread("./properties_2016.csv"))
 
 ###############################################################
 # Dropping columns

@@ -14,8 +14,8 @@ cleanTraining$valueratioNF = cleanTraining$taxvaluedollarcnt / cleanTraining$tax
 cleanTraining$livingareapropNF = cleanTraining$calculatedfinishedsquarefeet / cleanTraining$lotsizesquarefeet 
 cleanTraining$totalroomNF = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
 
-taxgroup = cleanTraining %>% group_by(., regionidzip) %>% summarise(., avgtaxamtNF = mean(taxamount))
-cleanTraining = left_join(cleanTraining, taxgroup, by='regionidzip')
+taxgroup = cleanTraining %>% dpylr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+cleanTraining = dplyr::left_join(cleanTraining, taxgroup, by='regionidzip')
           
 cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
                "taxdelinquencyflag", "deckflag", "unitcnt")
@@ -26,7 +26,7 @@ cleanTraining <- cleanTraining[ , !(names(cleanTraining) %in% cols_drop)]
 # Machine Learning Preparation 
 ###############################################################
 
-# partition the training and test data (75% train, 25% test) on month:
+# Partition the training and test data (75% train, 25% test) on month:
 set.seed(0)
 trainIndex <- createDataPartition(cleanTraining$month, 
                                   p = .75, 
@@ -54,11 +54,12 @@ maeSummary <- function(data, lev = NULL, model = NULL) {
 ###############################################################
 gridSearch <- trainControl(method = "cv",
                            number = 5,
-                           summaryFunction = maeSummary)
+                           summaryFunction = maeSummary,
+                           verboseIter = TRUE)
 
-gbmGrid <-  expand.grid(interaction.depth = c(3,5,7), 
-                        n.trees = c(100,200), 
-                        shrinkage = c(.1, .01),
+gbmGrid <-  expand.grid(interaction.depth = c(7,9,11), 
+                        n.trees = c(500,700), 
+                        shrinkage = c(.01, .001),
                         n.minobsinnode = 10)
 
 set.seed(0)
@@ -103,7 +104,7 @@ fitBestModel <- trainControl(method = "none",
                              summaryFunction = maeSummary)
 
 gbmFit3 <- train(logerror ~ .,
-                 data = train_data[,-1], 
+                 data = fullTrain, 
                  method = "gbm", 
                  preProcess = c("center", "scale"),
                  metric = "MAE",
@@ -116,21 +117,39 @@ gbmFit3 <- train(logerror ~ .,
 predict(gbmFit3, newdata = fullTrain)
 
 ###############################################################
-# Make Prediction for Submission 
+# Load Properties File and Add/Drop Features Used in Train Set
 ###############################################################
 
 load('cleanProperties_final.Rda')
 
+###This must be updated if any new features are added or dropped!
+
+cleanProperties$valueratioNF = cleanProperties$taxvaluedollarcnt / cleanProperties$taxamount
+cleanProperties$livingareapropNF = cleanProperties$calculatedfinishedsquarefeet / cleanProperties$lotsizesquarefeet 
+cleanProperties$totalroomNF = cleanProperties$bathroomcnt + cleanProperties$bedroomcnt
+
+taxgroup = cleanProperties %>% dplyr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+cleanProperties = dplyr::left_join(cleanProperties, taxgroup, by='regionidzip')
+
+cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
+               "taxdelinquencyflag", "deckflag", "unitcnt")
+
+cleanProperties <- cleanProperties[ , !(names(cleanProperties) %in% cols_drop)]
+
+###############################################################
+# Make Prediction for Submission 
+###############################################################
+
 makePrediction <- function(model, newdata, months, labels) {
-  predictions <- newdata[, "parcelid", drop=FALSE]
+  predictions <- cleanProperties[, "parcelid", drop=FALSE]
   for(i in 1:length(months)) {
-    newdata$month <- months[i]
-    predictions[, labels[i]] <- predict(model, newdata = newdata)
+    cleanProperties$month <- months[i]
+    predictions[, labels[i]] <- predict(model, newdata = cleanProperties)
   }
   write.csv(x = predictions, file = "submission.csv", 
             quote = FALSE, row.names = FALSE)
   return(predictions)
 }
 
-makePrediction(gbmFit3, newdata = test_data, months = c(10, 11, 12, 22, 23, 24), 
+makePrediction(gbmFit3, newdata = cleanProperties, months = c(10, 11, 12, 22, 23, 24), 
                labels = c("201610", "201611", "201612", "201710", "201711", "201712"))
