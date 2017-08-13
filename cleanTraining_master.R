@@ -3,7 +3,7 @@ library(data.table)
 library(dplyr)
 library(lubridate)
 library(Hmisc)
-library(mice)
+
 
 ###############################################################
 # Reading files 
@@ -128,7 +128,7 @@ cols_reduced <- names(cleanTraining)
 cols_factors <- c('airconditioningtypeid', 'buildingqualitytypeid', 'decktypeid',
                   'fireplacecnt', 'hashottuborspa', 'heatingorsystemtypeid', 
                   'poolcnt', 'propertylandusetypeid', 'regionidcounty', 
-                  'regionidzip', 'taxdelinquencyflag', 'month')
+                  'regionidzip', 'taxdelinquencyflag')
 cleanTraining[cols_factors] <- lapply(cleanTraining[cols_factors], factor)
 
 cleanTraining$garagecarcnt = as.numeric(cleanTraining$garagecarcnt)
@@ -137,8 +137,12 @@ cleanTraining$unitcnt = as.numeric(cleanTraining$unitcnt)
 ###############################################################
 # Rename Binary Variables to Flags
 ###############################################################
-cleanTraining = rename(cleanTraining, acflag = airconditioningtypeid, deckflag = decktypeid, 
-                       fireplaceflag = fireplacecnt, hottubflag = hashottuborspa, heatflag = heatingorsystemtypeid, poolflag = poolcnt)
+cleanTraining = dplyr::rename(cleanTraining, acflag = airconditioningtypeid, 
+                                              deckflag = decktypeid,
+                                              fireplaceflag = fireplacecnt, 
+                                              hottubflag = hashottuborspa,
+                                              heatflag = heatingorsystemtypeid, 
+                                              poolflag = poolcnt)
 
 
 ###############################################################
