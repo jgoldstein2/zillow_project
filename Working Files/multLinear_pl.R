@@ -185,15 +185,15 @@ sqrt(RSS_train4.model/(length(train)-length(multLinear_train4$coefficients)-1))
 # Anova Tests
 ###############################################################
 
-anova(multLinear_train3 ,multLinear_train)
-anova(multLinear_train4 ,multLinear_train)
+anova(multLinear_train3, multLinear_train)
+anova(multLinear_train4, multLinear_train)
 anova(bothAIC.full, multLinear_train)
 anova(forwardBIC, multLinear_train)
 
 # The ANOVA test results indicate that our full model is better than 
-# all of the reduce models.  However, this my be attributed to the large 
-# sample size (variance becomes more influential).  This actually makes
-# sense with our results since the full model has the lowest RSS.
+# all of the reduce models with regards to RSS/RSE.  However, the reduced model
+# may be better since the gain in RSS/RSE is not very much, and model complexity
+# will be reduced.
 
 # I think a few of our samples violated Cook's distance rule and 
 # the inlfuence plots suggested the same.  We may wat to consider 
