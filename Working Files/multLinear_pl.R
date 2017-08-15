@@ -4,6 +4,7 @@ library(car)
 library(caret)
 library(MASS)
 library(vcd)
+library(lubridate)
 
 # load('cleanTraining_final.Rda')
 
@@ -29,7 +30,7 @@ cleanTraining$totalroomNF = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
 # cleanTraining$regionidzip <- as.factor(cleanTraining$regionidzip)
 cleanTraining$regionidcounty <- as.factor(cleanTraining$regionidcounty)
 
-cols_drop <- c("building_quality", "property_group")
+cols_drop <- c("building_quality", "property_group", 'regionidzip', 'month')
 cleanTraining <- cleanTraining[,!(names(cleanTraining) %in% cols_drop)]
 
 ###############################################################
@@ -42,16 +43,23 @@ train = sample(1:nrow(cleanTraining), 7.5*nrow(cleanTraining)/10)
 test = (-train) 
 
 ### I removed land property and bad building quality because the coefficients returned NA
-multLinear_train = lm(logerror ~ . -parcelid -regionidzip -totalroomNF, data = cleanTraining[train,])
+multLinear_train = lm(logerror ~ . -parcelid -totalroomNF, data = cleanTraining[train,])
 summary(multLinear_train)
 (sum(multLinear_train$residuals**2)) # 1730.171
 vif(multLinear_train)
-train1_pred <- predict(multLinear, cleanTraining[test,])
+train1_pred <- predict(multLinear_train, cleanTraining[test,])
+
+train1_pred
+actual_logerror <- cleanTraining[test, 'logerror']
+RSS_test1 <- as.data.frame(cbind(train1_pred, actual_logerror))
+RSS_test1
+RSS_test1 <- RSS_test1 %>% mutate(Residuals = actual_logerror - train1_pred)
+sum(RSS_test1$Residuals)**2
 
 ### I removed these coefficients because the VIF for a lot of them were crazy big,
 ### Do not remove all of one category, use better judgement to select which variables to use
 multLinear_train2 = lm(logerror ~ . -parcelid -taxvaluedollarcnt -landtaxvaluedollarcnt 
-                       -taxamount -longitude -latitude -regionidcounty -regionidzip -totalroomNF, 
+                       -taxamount -longitude -latitude -regionidcounty -totalroomNF, 
                        data = cleanTraining[train,]) # can try removing different tax values
 
 summary(multLinear_train2)
@@ -77,7 +85,7 @@ train3_pred <- predict(multLinear_train3, cleanTraining[test,])
 
 ### AIC
 model.empty = lm(logerror ~ 1, data = cleanTraining[train,])
-model.full = lm(logerror ~ . -parcelid -regionidzip -totalroomNF, data = cleanTraining[train,])
+model.full = lm(logerror ~ . -parcelid -totalroomNF, data = cleanTraining[train,])
 scope = list(lower = formula(model.empty), upper = formula(model.full))
 
 forwardAIC = step(model.empty, scope, direction = "forward", k = 2)
@@ -116,7 +124,7 @@ fwdBIC_pred <- predict(forwardBIC, cleanTraining[test,])
 
 ### An alternative way to select feature stepwise
 multLinear_train4_var <- 
-    train(logerror~. -parcelid -regionidzip -totalroomNF, data=cleanTraining[train,], 
+    train(logerror~. -parcelid -totalroomNF, data=cleanTraining[train,], 
           method="glmStepAIC", k=2,
           trControl=trainControl(method="none"), preProc=c('center', 'scale'))
 
@@ -177,10 +185,10 @@ cleanProperties$assessValueMetricNF = cleanProperties$structuretaxvaluedollarcnt
 cleanProperties$livingareapropNF = cleanProperties$calculatedfinishedsquarefeet / cleanProperties$lotsizesquarefeet 
 cleanProperties$totalroomNF = cleanProperties$bathroomcnt + cleanProperties$bedroomcnt
 
-cleanProperties$regionidzip <- as.factor(cleanProperties$regionidzip)
+# cleanProperties$regionidzip <- as.factor(cleanProperties$regionidzip)
 cleanProperties$regionidcounty <- as.factor(cleanProperties$regionidcounty)
 
-cols_drop <- c("building_quality", "property_group")
+cols_drop <- c("building_quality", "property_group",'regionidzip')
 cleanProperties <- cleanProperties[,!(names(cleanProperties) %in% cols_drop)]
 
 ###############################################################
@@ -191,12 +199,14 @@ makePrediction <- function(model, newdata, months, labels) {
   predictions <- cleanProperties[, "parcelid", drop=FALSE]
   for(i in 1:length(months)) {
     cleanProperties$month <- months[i]
-    predictions[, labels[i]] <- predict(multLinear_train3, newdata = cleanProperties) #change 1st argument to whichever model you want predicitons from
+    predictions[, labels[i]] <- predict(multLinear_train, newdata = cleanProperties) #change 1st argument to whichever model you want predicitons from
   }
-  write.csv(x = predictions, file = "submission.csv", 
+  write.csv(x = predictions, file = "multLinear_full.csv", 
             quote = FALSE, row.names = FALSE)
   return(predictions)
 }
                       # change 1st argument to whichever model you want predictions from
-makePrediction(multLinear_train3, newdata = cleanProperties, months = c(10, 11, 12, 22, 23, 24), 
+makePrediction(multLinear_train, newdata = cleanProperties, months = c(10, 11, 12, 22, 23, 24), 
                labels = c("201610", "201611", "201612", "201710", "201711", "201712"))
+
+
