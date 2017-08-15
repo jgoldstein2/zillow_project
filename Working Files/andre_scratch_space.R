@@ -2,7 +2,7 @@
 # Common scripts to check missing data
 ###############################################################
 
-sort(sapply(cleanProperties, function(x) { sum(is.na(x)) }), decreasing=TRUE)
+sort(sapply(cleanTraining, function(x) { sum(is.na(x)) }), decreasing=TRUE)
 sapply(cleanTraining, typeof)
 sapply(cleanTraining, class)
 nrow(cleanTraining)
@@ -17,6 +17,27 @@ blank_count = as.data.frame(sapply(cleanTraining, function(x) (sum(x == "")/leng
 # save(cleanTraining, file='cleanTraining_master.Rda')
 # 
 # names(cleanTraining)
+###############################################################
+# Scratch Space
+###############################################################
+cleanTraining2 <- cleanTraining
+
+###############################################################
+# Changing variables to binary for multiple linear regression
+###############################################################
+
+cleanTraining$property_group_apt <- ifelse(cleanTraining$property_group == 'Apartment', 1, 0)
+cleanTraining$property_group_com <- ifelse(cleanTraining$property_group == 'Commercial', 1, 0)
+cleanTraining$property_group_house <- ifelse(cleanTraining$property_group == 'House', 1, 0)
+cleanTraining$property_group_land <- ifelse(cleanTraining$property_group == 'Land', 1, 0)
+
+cleanTraining$building_quality_good <- ifelse(cleanTraining$building_quality == 'Good', 1, 0)
+cleanTraining$building_quality_avg <- ifelse(cleanTraining$building_quality == 'Average', 1, 0)
+cleanTraining$building_quality_bad <- ifelse(cleanTraining$building_quality == 'Bad', 1, 0)
+
+cols_drop <- c("regionidzip", "regionidcounty", "building_quality", "property_group")
+cleanTraining <- cleanTraining[,!(names(cleanTraining) %in% cols_drop)]
+
 ###############################################################
 # Reading files 
 ###############################################################
@@ -98,13 +119,25 @@ cleanTraining$landtaxvaluedollarcnt = imputed.landtaxvaluedollarcnt
 imputed.taxamount = as.numeric(impute(cleanTraining$taxamount, mean))
 cleanTraining$taxamount = imputed.taxamount
 
-mode_ <- function(x) {
-  names(which.max(table(cleanTraining$bathroomcnt)))
+mode_ <- function(vec) {
+  names(which.max(table(vec)))
 }
 
 cleanTraining$bathroomcnt <- as.numeric(ifelse(cleanTraining$bathroomcnt == 0, 
                                                   mode_(cleanTraining$bathroomcnt), 
                                                             cleanTraining$bathroomcnt))
+
+cleanProperties$bathroomcnt <- as.numeric(impute(cleanProperties$bathroomcnt, mode_(cleanProperties$bathroomcnt)))
+
+cleanProperties$bedroomcnt <- as.numeric(impute(cleanProperties$bedroomcnt, mode_(cleanProperties$bedroomcnt)))
+
+cleanProperties$regionidcounty <- as.numeric(impute(cleanProperties$regionidcounty, mode_(cleanProperties$regionidcounty)))
+
+cleanProperties$longitude <- as.numeric(impute(cleanProperties$longitude, mode_(cleanProperties$longitude)))
+
+cleanProperties$latitude <- as.numeric(impute(cleanProperties$latitude, mode_(cleanProperties$latitude)))
+
+cleanProperties$regionidzip <- as.numeric(impute(cleanProperties$regionidzip, mode_(cleanProperties$regionidzip)))
 
 ###############################################################
 # Mutating Age of Home Variable and Imputing
@@ -258,37 +291,52 @@ names(imp.train_raw$imp)
 
 
 ###############################################################
-# Scratch Space
+# Feature Engineering and Selection 
 ###############################################################
-View(cleanProperties)
 
-str(properties)
+library(dplyr)
+cleanTraining$assessValueMetricNF = cleanTraining$structuretaxvaluedollarcnt / cleanTraining$landtaxvaluedollarcnt
+cleanTraining$livingareaMetricNF = cleanTraining$calculatedfinishedsquarefeet * cleanTraining$lotsizesquarefeet 
+cleanTraining$totalroomNF = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
 
-subm <- fread('pipelineGBM_12AugSubmission.csv')
-properties <- fread('properties_2016.csv')
+cleanTraining <- cleanTraining %>% dplyr::mutate(luxuryMetric = ifelse(building_quality == 'Good', (as.numeric(hottubflag)+as.numeric(poolflag)+as.numeric(deckflag))*totalroomNF,
+                                                                       ifelse(building_quality == 'Average', ((as.numeric(hottubflag)+as.numeric(poolflag)+as.numeric(deckflag))/2)*totalroomNF,
+                                                                              ((as.numeric(hottubflag)+as.numeric(poolflag)+as.numeric(deckflag))/3)*totalroomNF)))
 
-2985217 - 2971238
+taxgroup = cleanTraining %>% dplyr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+cleanTraining = dplyr::left_join(cleanTraining, taxgroup, by='regionidzip')
 
-library(mice)
-md.pattern(cleanProperties)
+cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
+               "taxdelinquencyflag", "deckflag", "unitcnt", "month", "building_quality", "property_group",
+               "acflag", 'heatflag', "longitude", "latitude", "regionidcounty", "poolflag",
+               "structuretaxvaluedollarcnt", "landtaxvaluedollarcnt")
 
+cleanTraining <- cleanTraining[ , !(names(cleanTraining) %in% cols_drop)]
 
-length(cleanProperties$totalroomNF)
+###############################################################
+# Load Properties File and Add/Drop Features Used in Train Set
+###############################################################
 
-mode_ <- function(vec) {
-  names(which.max(table(vec)))
-}
+# load('cleanProperties_final.Rda')
 
-cleanProperties$bathroomcnt <- as.numeric(impute(cleanProperties$bathroomcnt, mode_(cleanProperties$bathroomcnt)))
+###This must be updated if any new features are added or dropped!
 
-cleanProperties$bedroomcnt <- as.numeric(impute(cleanProperties$bedroomcnt, mode_(cleanProperties$bedroomcnt)))
+cleanProperties$assessValueMetricNF = cleanProperties$structuretaxvaluedollarcnt / cleanProperties$landtaxvaluedollarcnt
+cleanProperties$livingareaMetricNF = cleanProperties$calculatedfinishedsquarefeet * cleanProperties$lotsizesquarefeet 
+cleanProperties$totalroomNF = cleanProperties$bathroomcnt + cleanProperties$bedroomcnt
 
-cleanProperties$regionidcounty <- as.numeric(impute(cleanProperties$regionidcounty, mode_(cleanProperties$regionidcounty)))
+cleanProperties <- cleanProperties %>% dplyr::mutate(luxuryMetric = ifelse(building_quality == 'Good', (as.numeric(hottubflag)+as.numeric(poolflag)+as.numeric(deckflag)),
+                                                                           ifelse(building_quality == 'Average', (as.numeric(hottubflag)+as.numeric(poolflag)+as.numeric(deckflag))/2,
+                                                                                  (as.numeric(hottubflag)+as.numeric(poolflag)+as.numeric(deckflag))/3)))
 
-cleanProperties$longitude <- as.numeric(impute(cleanProperties$longitude, mode_(cleanProperties$longitude)))
+taxgroup = cleanProperties %>% dplyr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+cleanProperties = dplyr::left_join(cleanProperties, taxgroup, by='regionidzip')
 
-cleanProperties$latitude <- as.numeric(impute(cleanProperties$latitude, mode_(cleanProperties$latitude)))
+cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
+               "taxdelinquencyflag", "deckflag", "unitcnt", "month", "building_quality", "property_group",
+               "acflag", 'heatflag', "longitude", "latitude", "regionidcounty", "poolflag",
+               "structuretaxvaluedollarcnt", "landtaxvaluedollarcnt")
 
-cleanProperties$regionidzip <- as.numeric(impute(cleanProperties$regionidzip, mode_(cleanProperties$regionidzip)))
+cleanProperties <- cleanProperties[ , !(names(cleanProperties) %in% cols_drop)]
 
 
