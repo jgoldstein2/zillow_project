@@ -39,22 +39,30 @@ cleanTraining <- cleanTraining[,!(names(cleanTraining) %in% cols_drop)]
 
 ### This is for the train and test set, may not need
 set.seed(0)
-train = sample(1:nrow(cleanTraining), 7.5*nrow(cleanTraining)/10)
-test = (-train) 
 
+#use create data partition
+
+train = sample(1:nrow(cleanTraining), .75*nrow(cleanTraining))
+test = (-train) 
+length(train)
+length(test)
+nrow(cleanTraining[test,])
 ### I removed land property and bad building quality because the coefficients returned NA
-multLinear_train = lm(logerror ~ . -parcelid -totalroomNF, data = cleanTraining[train,])
+multLinear_train = lm(logerror ~ . -parcelid -totalroomNF , data = cleanTraining[train,])
 summary(multLinear_train)
 (sum(multLinear_train$residuals**2)) # 1730.171
 vif(multLinear_train)
 train1_pred <- predict(multLinear_train, cleanTraining[test,])
 
-train1_pred
 actual_logerror <- cleanTraining[test, 'logerror']
 RSS_test1 <- as.data.frame(cbind(train1_pred, actual_logerror))
-RSS_test1
 RSS_test1 <- RSS_test1 %>% mutate(Residuals = actual_logerror - train1_pred)
-sum(RSS_test1$Residuals)**2
+
+# RSS: 592.0957
+RSS_model1 <- sum(RSS_test1$Residuals**2)
+
+# RSE: .09355186
+sqrt(RSS_model1/(length(train)-length(multLinear_train$coefficients)-1))
 
 ### I removed these coefficients because the VIF for a lot of them were crazy big,
 ### Do not remove all of one category, use better judgement to select which variables to use
@@ -73,11 +81,19 @@ multLinear_train3 = lm(logerror ~ +bathroomcnt +calculatedfinishedsquarefeet +ho
                                    data = cleanTraining[train,])
 
 multLinear_train3$coefficients
-(sum(multLinear_train3$residuals**2)) # 1735.612
 summary(multLinear_train3)
 vif(multLinear_train3)
 
 train3_pred <- predict(multLinear_train3, cleanTraining[test,])
+
+RSS_test3 <- as.data.frame(cbind(train3_pred, actual_logerror))
+RSS_test3 <- RSS_test3 %>% mutate(Residuals = actual_logerror - train3_pred)
+
+# RSS: 593.7022
+RSS_model3 <- sum(RSS_test3$Residuals**2)
+
+# RSE: 0.09354149
+sqrt(RSS_model3/(length(train)-length(multLinear_train3$coefficients)-1))
 
 ###############################################################
 # Multiple Linear Regression Using Stepwise Selection
@@ -95,28 +111,38 @@ bothAIC.full = step(model.full, scope, direction = "both", k = 2)
 
 summary(forwardAIC)
 vif(forwardAIC) # some of the VIFs are extremely high
-(sum(forwardAIC$residuals**2)) # 1730.5
-(sum(backwardAIC$residuals**2)) # 1730.299
-(sum(bothAIC.empty$residuals**2)) # 1730.5
-(sum(bothAIC.full$residuals**2)) # 1730.299
 
 bothAIC.full_pred <- predict(bothAIC.full, cleanTraining[test,])
 
+RSS_bothAIC.full <- as.data.frame(cbind(bothAIC.full_pred, actual_logerror))
+RSS_bothAIC.full <- RSS_bothAIC.full %>% mutate(Residuals = actual_logerror - bothAIC.full_pred)
+
+# RSS: 592.1637
+RSS_bothAIC.model <- sum(RSS_bothAIC.full$Residuals**2)
+
+# RSE: 0.09354824
+sqrt(RSS_bothAIC.model/(length(train)-length(forwardAIC$coefficients)-1))
+
 ### BIC
-forwardBIC = step(model.empty, scope, direction = "forward", k = log(50))
-backwardBIC = step(model.full, scope, direction = "backward", k = log(50))
-bothBIC.empty = step(model.empty, scope, direction = "both", k = log(50))
-bothBIC.full = step(model.full, scope, direction = "both", k = log(50))
+forwardBIC = step(model.empty, scope, direction = "forward", k = log(nrow(cleanTraining[test,])))
+backwardBIC = step(model.full, scope, direction = "backward", k = log(nrow(cleanTraining[test,])))
+bothBIC.empty = step(model.empty, scope, direction = "both", k = log(nrow(cleanTraining[test,])))
+bothBIC.full = step(model.full, scope, direction = "both", k = log(nrow(cleanTraining[test,])))
 
 summary(forwardBIC)
 vif(forwardBIC) # some of the VIFs are extremely high
-(sum(forwardBIC$residuals**2)) # 1730.576
-(sum(backwardBIC$residuals**2)) # 1730.576
-(sum(bothBIC.empty$residuals**2)) # 1730.576
-(sum(bothBIC.full$residuals**2)) # 1730.576
-
 
 fwdBIC_pred <- predict(forwardBIC, cleanTraining[test,])
+
+RSS_fwdBIC <- as.data.frame(cbind(fwdBIC_pred, actual_logerror))
+
+RSS_fwdBIC <- RSS_fwdBIC %>% mutate(Residuals = actual_logerror - fwdBIC_pred)
+
+# RSS: 596.6752
+RSS_bothBIC.model <- sum(RSS_fwdBIC$Residuals**2)
+
+# RSE: 0.09390115
+sqrt(RSS_bothBIC.model/(length(train)-length(forwardBIC$coefficients)-1))
 
 ###############################################################
 # Multiple Linear Regression Using Caret Package
@@ -144,6 +170,17 @@ vif(multLinear_train4) # some VIFs are extremely high
 
 train4_pred <- predict(multLinear_train4, cleanTraining[test,])
 
+RSS_train4 <- as.data.frame(cbind(train4_pred, actual_logerror))
+
+RSS_train4 <- RSS_train4 %>% mutate(Residuals = actual_logerror - train4_pred)
+
+# RSS: 592.1121
+RSS_train4.model <- sum(RSS_train4$Residuals**2)
+
+# RSE: 0.09354417
+sqrt(RSS_train4.model/(length(train)-length(multLinear_train4$coefficients)-1))
+
+
 ###############################################################
 # Anova Tests
 ###############################################################
@@ -162,6 +199,21 @@ anova(forwardBIC, multLinear_train)
 # the inlfuence plots suggested the same.  We may wat to consider 
 # removing outliers from our training set, especially in the variables 
 # we keep.
+
+AIC(multLinear_train,
+    multLinear_train3,
+    multLinear_train4,
+    bothAIC.full,
+    forwardBIC)
+
+BIC(multLinear_train,
+    multLinear_train3,
+    multLinear_train4,
+    bothAIC.full,
+    forwardBIC)
+
+# Results from the AIC and BIC tests are negative.  We should select the 
+
 
 ###############################################################
 # Load Properties File and Add/Drop Features Used in Train Set
