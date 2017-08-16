@@ -7,7 +7,7 @@ output: html_document
 
 ```{r}
 # loading in cleanTraining and cleanProperties
-setwd("/Users/mikeghoul/Desktop/Data Science Bootcamp/Projects/Kaggle_Zillow/Rda folders")
+# setwd("/Users/mikeghoul/Desktop/Data Science Bootcamp/Projects/Kaggle_Zillow/Rda folders")
 load('cleanTraining_final.Rda')
 load('cleanProperties_final.Rda')
 ```
@@ -46,12 +46,12 @@ Multiple Linear Regression:
 
 ```{r}
 # subsetting data into test and training:
-train = sample(1:nrow(cleanTraining), 8*nrow(cleanTraining)/10)
+train = sample(1:nrow(cleanTraining), 7.5*nrow(cleanTraining)/10)
 test = (-train)
 
 # check splits:
 length(train)/nrow(cleanTraining)
-# 80%
+# 75%
 
 
 # Running a model on training data
@@ -118,39 +118,72 @@ scope = list(lower = formula(model.empty), upper = formula(model.full))
 ```
 
 AIC:
-```{r forwardAIC}
-library(MASS) 
+```{r forwardAIC, include=FALSE}
+library(MASS)
+forwardAIC = step(model.empty, scope, direction = "forward", k = 2)
+```
+
+```{r}
 summary(forwardAIC)
 ```
 
-```{r backwardAIC}
+```{r backwardAIC, include=FALSE}
+backwardAIC = step(model.full, scope, direction = "backward", k = 2) 
+```
+
+```{r}
 summary(backwardAIC)
 ```
 
-```{r bothAIC.empty}
+```{r bothAIC.empty, include=FALSE}
+bothAIC.empty = step(model.empty, scope, direction = "both", k = 2)
+```
+
+```{r}
 summary(bothAIC.empty)
 ```
 
-```{r bothAIC.full}
+```{r bothAIC.full, include=FALSE}
+bothAIC.full = step(model.full, scope, direction = "both", k = 2)
+```
+```{r}
 summary(bothAIC.full)
 ```
 
 BIC:
-```{r forwardBIC}
+```{r forwardBIC, include=FALSE}
+forwardBIC = step(model.empty, scope, direction = "forward", k = log(67680))
+```
+
+```{r}
 summary(forwardBIC)
 ```
 
-```{r backwardBIC}
+```{r backwardBIC, include=FALSE}
+backwardBIC = step(model.full, scope, direction = "backward", k = log(67680))
+```
+
+```{r}
 summary(backwardBIC)
 ```
 
-```{r both BIC empty}
+```{r both BIC empty, include=FALSE}
+bothBIC.empty = step(model.empty, scope, direction = "both", k = log(67680))
+```
+
+```{r}
 summary(bothBIC.empty)
 ```
 
-```{r both BIC full}
+
+```{r both BIC full, include=FALSE}
+bothBIC.full = step(model.full, scope, direction = "both", k = log(67680))
+```
+```{r}
 summary(bothBIC.full)
 ```
+
+
 
 Ridge Regression
 ```{r}
@@ -190,10 +223,9 @@ coef(ridge.bestlambdafull)
 
 Running Ridge on full data:
 ```{r}
-ridge.bestlambdafull = predict(ridge.bestlambdafull, s = bestlambda.ridge, newx = x)
+ridge.bestlambdafull = predict(ridge.bestlambdafull, s = cv.ridge.out$lambda.min, newx = x)
 mean((ridge.bestlambdafull - y)^2)
 ```
-
 
 Lasso Regression
 ```{r}
@@ -230,5 +262,4 @@ Running Lasso on full data:
 lasso.bestlambdafull = predict(lasso.bestlambdafull, s = cv.lasso.out$lambda.min, newx = x)
 mean((lasso.bestlambdafull - y)^2)
 ```
-
 
