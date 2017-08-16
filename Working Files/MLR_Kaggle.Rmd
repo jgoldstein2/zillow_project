@@ -1,0 +1,234 @@
+---
+title: "MLR_Kaggle"
+author: "MG"
+date: "8/14/2017"
+output: html_document
+---
+
+```{r}
+# loading in cleanTraining and cleanProperties
+setwd("/Users/mikeghoul/Desktop/Data Science Bootcamp/Projects/Kaggle_Zillow/Rda folders")
+load('cleanTraining_final.Rda')
+load('cleanProperties_final.Rda')
+```
+
+Feature Engineering:
+```{r}
+# cleanTraining:
+cleanTraining$valueratioNF = cleanTraining$taxvaluedollarcnt / cleanTraining$taxamount
+cleanTraining$livingareapropNF = cleanTraining$calculatedfinishedsquarefeet / cleanTraining$lotsizesquarefeet 
+cleanTraining$totalroomNF = cleanTraining$bathroomcnt + cleanTraining$bedroomcnt
+
+taxgroup = cleanTraining %>% dplyr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+cleanTraining = dplyr::left_join(cleanTraining, taxgroup, by='regionidzip')
+
+# cleanProperties:
+cleanProperties$valueratioNF = cleanProperties$taxvaluedollarcnt / cleanProperties$taxamount
+cleanProperties$livingareapropNF = cleanProperties$calculatedfinishedsquarefeet / cleanProperties$lotsizesquarefeet 
+cleanProperties$totalroomNF = cleanProperties$bathroomcnt + cleanProperties$bedroomcnt
+
+taxgroup = cleanProperties %>% dplyr::group_by(., regionidzip) %>% dplyr::summarise(., avgtaxamtNF = mean(taxamount))
+cleanProperties = dplyr::left_join(cleanProperties, taxgroup, by='regionidzip')
+```
+
+
+Dropping columns:
+```{r}
+cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvaluedollarcnt", "taxamount",
+               "taxdelinquencyflag", "deckflag", "unitcnt")
+cleanTraining <- cleanTraining[,!(names(cleanTraining) %in% cols_drop)]
+
+cleanProperties <- cleanProperties[,!(names(cleanProperties) %in% cols_drop)]
+```
+
+
+Multiple Linear Regression:
+
+```{r}
+# subsetting data into test and training:
+train = sample(1:nrow(cleanTraining), 8*nrow(cleanTraining)/10)
+test = (-train)
+
+# check splits:
+length(train)/nrow(cleanTraining)
+# 80%
+
+
+# Running a model on training data
+set.seed(0)
+model.saturated = lm(logerror ~ . -parcelid, cleanTraining[train,])
+summary(model.saturated)
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(model.saturated)
+```
+
+
+```{r}
+library(car)
+influencePlot(model.saturated)
+```
+
+
+Removing variables with low p-values:
+```{r}
+set.seed(0)
+model.reduced <- lm(logerror ~ . -parcelid -acflag -fireplaceflag -garagecarcnt -heatflag -longitude -structuretaxvaluedollarcnt -building_quality -totalroomNF, cleanTraining[train,])
+summary(model.reduced)
+```
+
+```{r}
+plot(model.reduced)
+influencePlot(model.reduced)
+# CookD is 5 for point 68958
+```
+
+VIF of reduced model:
+```{r VIF reduced}
+vif(model.reduced)
+```
+
+
+```{r}
+anova(model.saturated, model.reduced)
+#The p-value is large so we can use the reduced model (no significant difference)
+```
+
+AIC and BIC: the saturated model has a lower score for each
+```{r}
+AIC(model.saturated,  
+    model.reduced)
+
+BIC(model.saturated,
+    model.reduced)
+# reduced model is slightly better for both AIC and BIC
+```
+
+Stepwise:
+```{r}
+model.empty = lm(logerror ~ 1, data = cleanTraining[train,]) #The model with an intercept ONLY.
+model.full = lm(logerror ~ . -parcelid, data = cleanTraining[train,]) #The model with ALL variables.
+scope = list(lower = formula(model.empty), upper = formula(model.full))
+```
+
+AIC:
+```{r forwardAIC}
+library(MASS) 
+summary(forwardAIC)
+```
+
+```{r backwardAIC}
+summary(backwardAIC)
+```
+
+```{r bothAIC.empty}
+summary(bothAIC.empty)
+```
+
+```{r bothAIC.full}
+summary(bothAIC.full)
+```
+
+BIC:
+```{r forwardBIC}
+summary(forwardBIC)
+```
+
+```{r backwardBIC}
+summary(backwardBIC)
+```
+
+```{r both BIC empty}
+summary(bothBIC.empty)
+```
+
+```{r both BIC full}
+summary(bothBIC.full)
+```
+
+Ridge Regression
+```{r}
+grid = 10^seq(5, -2, length = 100)
+x = model.matrix(logerror ~ . -parcelid, cleanTraining)[, -1] #Dropping the intercept column.
+y = cleanTraining$logerror 
+y.test = y[test]
+ridge.models.train = glmnet(x[train, ], y[train], alpha = 0, lambda = grid)
+ridge_coef <- coef(ridge.models.train)
+```
+
+```{r}
+plot(ridge.models.train, xvar = "lambda", label = TRUE, main = "Ridge Regression")
+```
+
+```{r}
+set.seed(0)
+cv.ridge.out = cv.glmnet(x[train, ], y[train],
+                         lambda = grid, alpha = 0, nfolds = 10)
+```
+
+```{r}
+plot(cv.ridge.out, main = "Ridge Regression\n")
+```
+
+
+```{r}
+library(glmnet)
+ridge.bestlambdatest = predict(ridge.models.train, s = cv.ridge.out$lambda.min, newx = x[test, ])
+mean((ridge.bestlambdatest - y.test)^2)
+```
+
+```{r}
+ridge.bestlambdafull = glmnet(x, y, alpha = 0, lambda = cv.ridge.out$lambda.min)
+coef(ridge.bestlambdafull)
+```
+
+Running Ridge on full data:
+```{r}
+ridge.bestlambdafull = predict(ridge.bestlambdafull, s = bestlambda.ridge, newx = x)
+mean((ridge.bestlambdafull - y)^2)
+```
+
+
+Lasso Regression
+```{r}
+grid2 = 10^seq(4, -4, length = 100)
+lasso.models.train = glmnet(x[train, ], y[train], alpha = 1, lambda = grid2)
+lasso_coef <- coef(lasso.models.train)
+```
+
+```{r}
+plot(lasso.models.train, xvar = "lambda", label = TRUE, main = "Lasso Regression")
+```
+
+```{r}
+set.seed(0)
+cv.lasso.out = cv.glmnet(x[train, ], y[train],
+                         lambda = grid, alpha = 1, nfolds = 10)
+plot(cv.lasso.out, main = "Lasso Regression\n")
+```
+
+
+```{r}
+lasso.bestlambdatest = predict(lasso.models.train, s = cv.lasso.out$lambda.min, newx = x[test, ])
+mean((lasso.bestlambdatest - y.test)^2)
+```
+
+
+```{r}
+lasso.bestlambdafull = glmnet(x, y, alpha = 1, lambda = cv.lasso.out$lambda.min)
+coef(lasso.bestlambdafull)
+```
+
+Running Lasso on full data:
+```{r}
+lasso.bestlambdafull = predict(lasso.bestlambdafull, s = cv.lasso.out$lambda.min, newx = x)
+mean((lasso.bestlambdafull - y)^2)
+```
+
+
