@@ -311,7 +311,7 @@ makePrediction <- function(model, newdata, months, labels) {
     cleanProperties$month <- months[i]
     predictions[, labels[i]] <- predict(model, newdata = cleanProperties)
   }
-  write.csv(x = predictions, file = "ensem7_full.csv", 
+  write.csv(x = predictions, file = "ensem7modls_full.csv", 
             quote = FALSE, row.names = FALSE)
   return(predictions)
 }
@@ -319,6 +319,6 @@ makePrediction <- function(model, newdata, months, labels) {
 makePrediction(full_ensemModel, newdata = cleanProperties, months = c(10, 11, 12, 22, 23, 24), 
                labels = c("201610", "201611", "201612", "201710", "201711", "201712"))
 
-
+predsWtAvg <- data.frame(sapply(full_model_list, predict, newdata=cleanProperties))
 
 
