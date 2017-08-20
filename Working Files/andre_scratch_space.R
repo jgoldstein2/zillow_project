@@ -22,6 +22,14 @@ blank_count = as.data.frame(sapply(cleanTraining, function(x) (sum(x == "")/leng
 ###############################################################
 cleanTraining2 <- cleanTraining
 
+# head(gbmEnsemble_mean, 20)
+# names(gbmEnsemble_median)
+# gbmEnsemble_mean[2:37] <- NULL
+# dim(gbmEnsemble_mean)
+# write.csv(gbmEnsemble_mean, file='ensemble_mean.csv', row.names = F)
+
+
+
 ###############################################################
 # Changing variables to binary for multiple linear regression
 ###############################################################
@@ -339,4 +347,103 @@ cols_drop <- c("bathroomcnt","bedroomcnt", "regionidzip", "hottubflag", "taxvalu
 
 cleanProperties <- cleanProperties[ , !(names(cleanProperties) %in% cols_drop)]
 
+###############################################################
+# Ensembling Scratch Work
+###############################################################
 
+head(gbmEnsemble_mean, 20)
+names(gbmEnsemble_median)
+gbmEnsemble_mean[2:37] <- NULL
+dim(gbmEnsemble_mean)
+head
+write.csv(gbmEnsemble_mean, file='ensemble_mean.csv', row.names = F)
+
+library(dplyr)
+yuhanGBM1 <- fread('submission 1.csv', header = T)
+andreGBM1 <- fread('gbmRun6_Submission13Aug.csv', header = T)
+yuhanGBM2 <- fread('submission 2.csv', header = T)
+yuhanGBM3 <- fread('submission 3.csv', header = T)
+andreGBM2 <- fread('gbmRun2_Submission13Aug.csv', header = T)
+andreGBM3 <- fread('gbmRun4_Submission13Aug.csv', header = T)
+
+andreGBM1 <- andreGBM
+yuhanGBM1 <- yuhanGBM
+
+colnames(yuhanGBM1) <-  c('parcelid', '201610Y1', '201611Y1', '201612Y1', '201710Y1', '201711Y1', '201712Y1')
+colnames(yuhanGBM2) <-  c('parcelid', '201610Y2', '201611Y2', '201612Y2', '201710Y2', '201711Y2', '201712Y2')
+colnames(yuhanGBM3) <-  c('parcelid', '201610Y3', '201611Y3', '201612Y3', '201710Y3', '201711Y3', '201712Y3')
+
+colnames(andreGBM1) <-  c('parcelid', '201610A1', '201611A1', '201612A1', '201710A1', '201711A1', '201712A1')
+colnames(andreGBM2) <-  c('parcelid', '201610A2', '201611A2', '201612A2', '201710A2', '201711A2', '201712A2')
+colnames(andreGBM3) <-  c('parcelid', '201610A3', '201611A3', '201612A3', '201710A3', '201711A3', '201712A3')
+
+gbmStack <- left_join(yuhanGBM1, yuhanGBM2, by = 'parcelid')
+gbmStack <- left_join(gbmStack, yuhanGBM3, by = 'parcelid')
+gbmStack <- left_join(gbmStack, andreGBM1, by = 'parcelid')
+gbmStack <- left_join(gbmStack, andreGBM2, by = 'parcelid')
+gbmStack <- left_join(gbmStack, andreGBM3, by = 'parcelid')
+head(gbmStack)
+
+
+x2 <- fread('stacked_test.csv')
+nrow(x2)
+head(x2)
+head(gbmStack)
+
+names(gbmStack)
+
+s=c(); j=1; c = 2; i=1
+while (j <= 6) {
+  for (i in 1:nrow(gbmStack)) {
+    s[i,j] = mean(c(gbmStack[i, c] , gbmStack[i, c+1] , gbmStack[i, c+2],
+                    gbmStack[i, c+3] , gbmStack[i, c+4] , gbmStack[i, c+5]))
+    i=i+1
+  }
+  j=j+1
+  c=c+6
+}
+
+makePrediction <- function(model, newdata, months, labels) {
+  months = c(10, 11, 12, 22, 23, 24)
+  labels = c("201610", "201611", "201612", "201710", "201711", "201712")
+  predictions <- cleanProperties[, "parcelid", drop=FALSE]
+  for(i in 1:length(months)) {
+    j=1
+    while (j <= nrow(cleanProperties)) {
+      # cleanProperties$month <- months[i]
+      predictions[j, labels[i]] <- mean((gbmStack[j, 2], gbmStack[j, 8], gbmStack[j, 14],
+                                         gbmStack[j, 20], gbmStack[j, 26], gbmStack[j, 32]) #change 1st argument to whichever model you want predicitons from
+                                        j=j+1
+    }
+  }
+  write.csv(x = predictions, file = "ensemble_mean.csv", 
+            quote = FALSE, row.names = FALSE)
+  # return(predictions)
+}
+
+
+c
+x2[1,(c+2)]
+
+x2[1,4]
+
+mean(gbmStack[5, 2] , gbmStack[5, 3] , gbmStack[5, 4],
+     gbmStack[5, 5] , gbmStack[5, 6] , gbmStack[5, 7])
+
+i=1
+while (i <= nrow(gbmStack)) {
+  gbmStack$`201610`[[i]] = mean(c(gbmStack[i, 2] , gbmStack[i, 3] , gbmStack[i, 4],
+                                  gbmStack[i, 5] , gbmStack[i, 6] , gbmStack[i, 7]))
+  gbmStack$`201611`[[i]] = mean(c(gbmStack[i, 8] , gbmStack[i, 9] , gbmStack[i, 10] ,
+                                  gbmStack[i, 11] , gbmStack[i, 12] , gbmStack[i, 13]))
+  gbmStack$`201612`[[i]] = mean(c(gbmStack[i, 14] , gbmStack[i, 15] , gbmStack[i, 16] ,
+                                  gbmStack[i, 17] , gbmStack[i, 18] , gbmStack[i, 19]))
+  gbmStack$`201710`[[i]] = mean(c(gbmStack[i, 20] , gbmStack[i, 21] , gbmStack[i, 22] ,
+                                  gbmStack[i, 23] , gbmStack[i, 24] , gbmStack[i, 25]))
+  gbmStack$`201711`[[i]] = mean(c(gbmStack[i, 26] , gbmStack[i, 27] , gbmStack[i, 28] ,
+                                  gbmStack[i, 29] , gbmStack[i, 30] , gbmStack[i, 31]))
+  gbmStack$`201712`[[i]] = mean(c(gbmStack[i, 32] , gbmStack[i, 33] , gbmStack[i, 34] ,
+                                  gbmStack[i, 35] , gbmStack[i, 36] , gbmStack[i, 37]))
+  cat('row:', i)
+  i=i+1
+}
