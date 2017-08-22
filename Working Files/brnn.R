@@ -45,13 +45,15 @@ model_brnn <- brnn(x=x,
                    y=y, 
                    params=hypParams,
                    metric = maeSummary,
+                   preProcess=c('YeoJohnson'),
+                   maximize=F,
                    verbose=T,
                    seed=0)
 
 ## Testing model
 brnn_pred <- predict(model_brnn, newdata=data.matrix(subTest[,-1]))
-View(cbind(brnn_pred, subTest$logerror))
-
+# View(cbind(brnn_pred, subTest$logerror))
+sum(abs(brnn_pred-subTest$logerror))/nrow(subTest)
 ## Writing csv
 makePrediction <- function(model, newdata, months, labels) {
   predictions <- cleanProperties[, "parcelid", drop=FALSE]
