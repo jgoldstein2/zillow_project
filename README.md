@@ -7,3 +7,6 @@ A few outstanding questions:
 3) Change imputation of bathroomcount to mode so it can be replicated. 
 
 #RECOMMEND MERGING THIS CODE WITH MASTER CODE AND RE-RUNNING TO OBTAIN A FINAL CLEAN DATA FRAME. RIGHT NOW THE CODE IS NOT WELL-ORGANIZED.
+
+
+https://docs.google.com/presentation/d/1UH8ZpwLY63fw3oq38yEGfUxnWY5epKeP3WgwSzkgAwU/edit?usp=sharing
